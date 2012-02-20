@@ -1,0 +1,4 @@
+content	hushtunnel	content/
+overlay	chrome://browser/content/browser.xul	chrome://hushtunnel/content/overlay.xul
+
+locale	hushtunnel	en-US	locale/en-US/

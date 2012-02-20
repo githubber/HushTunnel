@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="overlay.css" type="text/css"?>
+<!DOCTYPE overlay SYSTEM "chrome://hushtunnel/locale/overlay.dtd">
+<overlay id="hushtunnel-overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<script src="overlay.js"/>
+<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+<panel id="settings" style="margin:5px;border:1px solid #666" onpopupshowing="HUSHTUNNEL.Load()" onpopuphiding="HUSHTUNNEL.Save()">
+<groupbox>
+  <caption label="Settings"/>
+
+    <label control="server" value="Tunnel server:" style="margin-top:5px;"/>
+    <textbox id="server" style="height:26px;width:150px;"/>
+
+    <label control="user" value="Username:" style="margin-top:5px;"/>
+    <textbox id="user" style="height:26px;width:150px;"/>
+
+    <label control="pass" value="Password:" style="margin-top:5px;"/>
+    <textbox id="pass" type="password" style="height:26px;width:150px;"/>		 
+	<hbox style="margin-top:10px;" class="none" id="test">
+	   <button id="test-button" label="Test" style="font-size:12px;" onclick="HUSHTUNNEL.Test()"/>
+  </hbox>
+  
+  <label value="Get access to a server!" style="text-decoration:underline;color:#336699;cursor:pointer;font-size:12px;text-align:center;" onclick="window.open('http://www.hushtunnel.com')"/>
+	
+</groupbox>
+</panel> 	
+</window>
+<statusbar id="status-bar" >
+  	<statusbarpanel id="hushtunnel-panel" label="" class="lock_off" onclick="HUSHTUNNEL.Toggle(event)" />
+ 	</statusbar>
+
+</overlay>
