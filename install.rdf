@@ -6,7 +6,7 @@
   
     <em:id>hushtunnel@congress.public</em:id>
     <em:name>Hush Tunnel</em:name>
-    <em:version>0.1</em:version>
+    <em:version>0.2</em:version>
     <em:unpack>true</em:unpack>
     <em:type>2</em:type>
     <em:description>Traffic redirection around censorship tactics and agreements</em:description>

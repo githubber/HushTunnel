@@ -1,5 +1,5 @@
 /*
-		Hush Tunnel v0.1
+		Hush Tunnel v0.2
 		
 		Copyright (c) 2012 - 2013 Tamer Rizk (trizk@inficron.com)
 		
@@ -27,10 +27,14 @@ var HUSHTUNNEL = new function() {
 	var pPid = false;
 	var reg = false;
 	var winreg = false;
-	//uncomment the following line and use deConsole.logStringMessage(''); to print debug messages to error console
-  //var deConsole = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
-	//deConsole.logStringMessage('');
+	var blocking = false;
+	//uncomment the following line and use console.logStringMessage(''); to print debug messages to error console
+  //var cons = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
+	//cons.logStringMessage('');
 	
+  var pwMan = Components.classes['@mozilla.org/login-manager;1'].getService(Components.interfaces.nsILoginManager); 	
+	var nsLogin = new Components.Constructor('@mozilla.org/login-manager/loginInfo;1',Components.interfaces.nsILoginInfo,'init');
+		                                             
 	//WINNT,Linux, or Darwin
 	var os = Components.classes['@mozilla.org/xre/app-info;1'].getService(Components.interfaces.nsIXULRuntime).OS.toUpperCase();  
 	var file = Components.classes['@mozilla.org/file/directory_service;1'].getService(Components.interfaces.nsIProperties).get('ProfD', Components.interfaces.nsILocalFile); 
@@ -38,24 +42,8 @@ var HUSHTUNNEL = new function() {
   file.append('extensions');
 	file.append('hushtunnel@congress.public');   
 	file.append('components');
+	
 	var path=file.path;
-/*	
-file.initWithPath('/home/gxxx/Desktop/hushtunnel/components');
-
-	file.append('extensions');
-	file.append('hushtunnel@congress.public');   
-	file.append('components');
-
-var entries = file.directoryEntries;  
-var array = [];  
-while(entries.hasMoreElements())  
-{  
-  var entry = entries.getNext();  
-  entry.QueryInterface(Components.interfaces.nsIFile);  
-  alert(entry.path);  
-}  
-*/
-
   var prog = {
   	'USER':'',
    	'WINNT':'sstart.exe',
@@ -91,10 +79,31 @@ while(entries.hasMoreElements())
 			'network.proxy.socks_remote_dns':false,
 			'network.proxy.no_proxies_on':''	
    };
+
+   var getLogin = function(){
+        var login = pwMan.findLogins({},'chrome://hushtunnel@congress.public',null,'SSH User');
+        return login && login.length>0 ? [login[0].username,login[0].password] : [];   
+   };
    
    var getPref=function(k){
+   
+      if(k.match(/^extensions\.hushtunnel\.ssh\.(?:(?:username)|(?:password))$/i)){
+			  var login = getLogin();
+			  if(login && login.length>1){           
+				   return k.match(/\.username$/i) ? login[0].replace(/^xxxxx$/,'') : login[1].replace(/^xxxxx$/,'');
+				}        
+      }
+   
 			var t = pref.getPrefType(k);
 			if(t==32){
+			  if(k.match(/^extensions\.hushtunnel\.ssh\.(?:(?:username)|(?:password))$/i)){
+			     if(!pref.getCharPref('extensions.hushtunnel.ssh.username') || !pref.getCharPref('extensions.hushtunnel.ssh.password')) return '';
+			     setPref('extensions.hushtunnel.ssh.username',pref.getCharPref('extensions.hushtunnel.ssh.username'));
+			     setPref('extensions.hushtunnel.ssh.password',pref.getCharPref('extensions.hushtunnel.ssh.password'));
+			     pref.setCharPref('extensions.hushtunnel.ssh.username','');
+			     pref.setCharPref('extensions.hushtunnel.ssh.password','');
+			     return getPref(k);
+			  }
 				return pref.getCharPref(k);	
 			}else if(t==64){
 			  return pref.getIntPref(k);
@@ -103,7 +112,18 @@ while(entries.hasMoreElements())
 			}
 			return '';
    };
-   var setPref=function(k,v){
+   
+   var setPref=function(k,v){   
+      if(k.match(/^extensions\.hushtunnel\.ssh\.(?:(?:username)|(?:password))$/i)){
+			  var login = getLogin();
+			  if(!login || login.length<2){ 			      
+				    pwMan.addLogin(k.match(/\.username$/i) ? new nsLogin('chrome://hushtunnel@congress.public',null,'SSH User',v,'xxxxx','','') : new nsLogin('chrome://hushtunnel@congress.public',null,'SSH User','xxxxx',v,'',''));  
+						return;
+				}   				
+				pwMan.modifyLogin( new nsLogin('chrome://hushtunnel@congress.public',null,'SSH User',login[0],login[1],'',''), k.match(/\.username$/i) ? new nsLogin('chrome://hushtunnel@congress.public',null,'SSH User',v,login[1],'','') : new nsLogin('chrome://hushtunnel@congress.public',null,'SSH User',login[0],v,'',''));				
+				return;        
+      }   
+      
 			var t = pref.getPrefType(k);
 			if(t==32){
 				pref.setCharPref(k,v);	
@@ -114,8 +134,10 @@ while(entries.hasMoreElements())
 			}   
   };   
   
-  this.Test = function(){
- 
+  this.Test = function(){ 
+    if(blocking) return;
+    blocking = true;
+    
   	this.Save(true);	  	
   	onPrefs();
   	document.getElementById('test').className ='loading';
@@ -162,13 +184,17 @@ while(entries.hasMoreElements())
 	};	
 
 	this.Toggle = function(e){
-		var o=document.getElementById('hushtunnel-panel');
-		
+
+		if(blocking) return;
+	  blocking = true;
+	                      
+		var o=document.getElementById('hushtunnel-panel');		
 		if(e && e.button==2){
 			e.preventDefault();
 			e.stopPropagation();
 			document.getElementById('test').className = 'none';
-			document.getElementById('settings').openPopup(o, 'before_end', 0, 0, false, false);			
+			document.getElementById('settings').openPopup(o, 'before_end', 0, 0, false, false);
+			blocking = false;			
 			return false;
 		}
 				
@@ -177,16 +203,17 @@ while(entries.hasMoreElements())
 			o.className='lock_off';
 			offPrefs();
 			killProcess(); 
+			blocking = false;
 		}else{			
 			on = true;
-			o.className='lock_on';
-			onPrefs();
+			o.className='lock_wait';
+			onPrefs();               
 			ssh();		
 		}		
 	};
 	var checkssh=function(test,tm){
 	  if(!tm)tm=7000;
-		test ? window.setTimeout(function(){document.getElementById('test').className = process.isRunning ? 'check' : 'x';	killProcess();},tm) : window.setTimeout(function(){if(!process.isRunning){on = true;HUSHTUNNEL.Toggle();}else{checkssh(false,60)}},tm);
+		test ? window.setTimeout(function(){document.getElementById('test').className = process.isRunning ? 'check' : 'x';	killProcess(); blocking = false; },tm) : window.setTimeout(function(){blocking = false;if(!process.isRunning){on = true;HUSHTUNNEL.Toggle();}else{if(document.getElementById('hushtunnel-panel').className=='lock_wait')document.getElementById('hushtunnel-panel').className='lock_on';checkssh(false,60)}},tm);
 	};
 
 	var onPrefs = function(){
@@ -257,14 +284,10 @@ while(entries.hasMoreElements())
 			checkssh();
 			return false;
 		}
-		
-		
+				
 		if(prog['USER']){
 			runProcess(prog['USER'],[],false);
-		}else if(os=='WINNT'){			
-			//temporarily comment for convenience
-			//file.append('plink.exe');
-				
+		}else if(os=='WINNT'){							
 			if(!winreg && reg){
 				var hostkey = new RegExp('@(?:'+port+'\:)?'+server+'$');						
 				reg.open(reg.ROOT_KEY_CURRENT_USER,'SOFTWARE',reg.ACCESS_ALL);
@@ -285,8 +308,7 @@ while(entries.hasMoreElements())
 			}	
 			runProcess(prog[os],['plink.exe','-batch','-ssh','-pw',pass,'-C','-A','-N','-L',proxyPort+':'+proxy+':'+proxyPort,user+'@'+server+':'+port],false);													
 		}else {			
-			runProcess(prog[os],[path+'/'+'ssh.pl',pass,'-q','-T','-f','-N','-n','-o','StrictHostKeyChecking=no','-p',port,'-L',proxyPort+':'+proxy+':'+proxyPort,user+'@'+server],false);
-	
+			runProcess(prog[os],[path+'/'+'ssh.pl',pass,'-q','-T','-f','-N','-n','-o','StrictHostKeyChecking=no','-p',port,'-L',proxyPort+':'+proxy+':'+proxyPort,user+'@'+server],false);	
 		}
 		
 		checkssh();

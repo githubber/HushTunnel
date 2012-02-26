@@ -8,6 +8,8 @@ my $path=__FILE__;
 $path=~s/\/[^\/]*$//sm;
 chdir($path);
 
+'rm -f ../defaults/preferences/hushtunnel.js' if (-e '../defaults/preferences/hushtunnel.js');
+
 my $ssh = '';
 my $sshpass = '';
 if(-e '/bin/ssh'){
@@ -54,17 +56,17 @@ defined(my $pid=fork) || die "$!";
 if($pid){
   waitpid($pid,0);
   $cmd = pop @ARGV;
-  $pid = join("\n", grep(!/perl/i,grep( /\Q$cmd\E/, split("\n",`ps -ax`))));  
-  $pid =~s/^[\r\n\s\t]+//gsm; 
-  $pid =~s/[^0-9]+.*$//gsm; 
+  $pid = join("\n", grep(!/perl/i,grep( /\Q$cmd\E/, split("\n",`ps -ax`))));
+  $pid =~s/^[\r\n\s\t]+//gsm;
+  $pid =~s/[^0-9]+.*$//gsm;
   $pid+=0;
   if($pid>0){
-     $SIG{'HUP'}=$SIG{'KILL'}=$SIG{'QUIT'}=$SIG{'TERM'}=$SIG{'STOP'}=$SIG{'ABRT'}=$SIG{'ALRM'}=sub{kill(-9,$pid) if($pid);exit;};   
+     $SIG{'HUP'}=$SIG{'KILL'}=$SIG{'QUIT'}=$SIG{'TERM'}=$SIG{'STOP'}=$SIG{'ABRT'}=$SIG{'ALRM'}=sub{kill(-9,$pid) if($pid);exit;};
      my $apid = $$;
      my $zpid = fork;
      if($zpid){
        waitpid($zpid,0);
-     }else{           
+     }else{
         my $timeout=2880;
         while(--$timeout){
            sleep(30);
