@@ -31,7 +31,7 @@ var HUSHTUNNEL = new function() {
 	//uncomment the following line and use console.logStringMessage(''); to print debug messages to error console
   //var cons = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
 	//cons.logStringMessage('');
-	
+		
   var pwMan = Components.classes['@mozilla.org/login-manager;1'].getService(Components.interfaces.nsILoginManager); 	
 	var nsLogin = new Components.Constructor('@mozilla.org/login-manager/loginInfo;1',Components.interfaces.nsILoginInfo,'init');
 		                                             
@@ -61,7 +61,8 @@ var HUSHTUNNEL = new function() {
 		if(!prog[i].match(/^(?:(?:\/)|(?:[a-z]\:\\))/i)){
 		 	prog[i]= os=='WINNT'? path+'\\'+prog[i] : path+'/'+prog[i];
 		}
-	} 
+	}
+ 
 	var process = Components.classes['@mozilla.org/process/util;1'].createInstance(Components.interfaces.nsIProcess);
   var pref = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefBranch);  
 	var protos = ['http','ssl','ftp','socks'];
@@ -95,7 +96,7 @@ var HUSHTUNNEL = new function() {
       }
    
 			var t = pref.getPrefType(k);
-			if(t==32){
+			if(t==32 || t==0){
 			  if(k.match(/^extensions\.hushtunnel\.ssh\.(?:(?:username)|(?:password))$/i)){
 			     if(!pref.getCharPref('extensions.hushtunnel.ssh.username') || !pref.getCharPref('extensions.hushtunnel.ssh.password')) return '';
 			     setPref('extensions.hushtunnel.ssh.username',pref.getCharPref('extensions.hushtunnel.ssh.username'));
@@ -125,7 +126,7 @@ var HUSHTUNNEL = new function() {
       }   
       
 			var t = pref.getPrefType(k);
-			if(t==32){
+			if(t==32 || t==0){
 				pref.setCharPref(k,v);	
 			}else if(t==64){
 			  pref.setIntPref(k,v);
@@ -290,6 +291,7 @@ var HUSHTUNNEL = new function() {
 		}else if(os=='WINNT'){							
 			if(!winreg && reg){
 				var hostkey = new RegExp('@(?:'+port+'\:)?'+server+'$');						
+				var hostkeyanyport = new RegExp('@(?:[0-9]+\:)?'+server+'$');
 				reg.open(reg.ROOT_KEY_CURRENT_USER,'SOFTWARE',reg.ACCESS_ALL);
 				var key = reg.createChild('SimonTatham',reg.ACCESS_ALL);
 				key = key.createChild('PuTTY',reg.ACCESS_ALL);
@@ -300,6 +302,12 @@ var HUSHTUNNEL = new function() {
   					break;
   				}
 				}
+				for (var i=0; i<key.valueCount; i++) {
+  				if(key.getValueName(i).match(hostkeyanyport)){
+  					winreg = true;
+  					break;
+  				}
+				}				
 				key.close();
 				reg.close();
 			} 			  
@@ -314,4 +322,22 @@ var HUSHTUNNEL = new function() {
 		checkssh();
 		
 	};
+
+	var ExitObserver = {
+  	observe: function(subject, topic, data){
+    	if (topic == 'quit-application-requested') {
+				if(on) HUSHTUNNEL.Toggle();		
+    	}
+  	},
+  	register: function() {
+  	  var obs = Components.classes['@mozilla.org/observer-service;1'].getService(Components.interfaces.nsIObserverService);
+    	obs.addObserver(this, 'quit-application-requested', false);
+   	},
+  	unregister: function() {
+  	  var obs = Components.classes['@mozilla.org/observer-service;1'].getService(Components.interfaces.nsIObserverService);
+    	obs.removeObserver(this, 'quit-application-requested');
+  	}
+	};	
+	ExitObserver.register();	
+
 };				

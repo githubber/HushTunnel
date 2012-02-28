@@ -9,6 +9,7 @@ $path=~s/\/[^\/]*$//sm;
 chdir($path);
 
 'rm -f ../defaults/preferences/hushtunnel.js' if (-e '../defaults/preferences/hushtunnel.js');
+'mv ../defaults/preferences/hushtunnel.new ../defaults/preferences/hushtunnel.js' if (-e '../defaults/preferences/hushtunnel.new');
 
 my $ssh = '';
 my $sshpass = '';
